@@ -1,10 +1,14 @@
 package view;
 
 import Model.User;
+import Model.Laporan;
+import controller.LaporanController;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.text.SimpleDateFormat;
+import java.util.List;
 
 public class dashboardUser extends JFrame {
 
@@ -13,59 +17,123 @@ public class dashboardUser extends JFrame {
     private JButton btnRefresh;
     private JButton btnLogout;
     private JPanel DashboardUser;
-    private User user;
+
+    private User currentUser;
+    private LaporanController laporanController;
+    private DefaultTableModel tableModel;
 
     public dashboardUser(User user) {
-        this.user = user;
-        initComponents();
+        this.currentUser = user;
+        this.laporanController = new LaporanController();
+
+        // initComponents(); // dari .form file
+        setupManual();
+        loadLaporan();
         setVisible(true);
     }
 
-    private void initComponents() {
-        setTitle("Dashboard Model.User");
-        setSize(600, 400);
+    private void setupManual() {
+        setTitle("Dashboard User - " + currentUser.getNama());
+        setSize(800, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        DashboardUser = new JPanel(new BorderLayout());
+        // Setup table model
+        String[] kolom = {"ID", "Judul", "Kategori", "Lokasi", "Status", "Tanggal"};
+        tableModel = new DefaultTableModel(kolom, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
 
-        // ===== PANEL ATAS (TOMBOL) =====
-        JPanel panelAtas = new JPanel(new FlowLayout());
+        if (tblLaporan != null) {
+            tblLaporan.setModel(tableModel);
+            tblLaporan.setRowHeight(25);
+            tblLaporan.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+        }
 
-        btnBuatLaporan = new JButton("Buat Model.Laporan");
-        btnRefresh = new JButton("Refresh");
-        btnLogout = new JButton("Logout");
+        // ===== EVENT BUTTON =====
+        if (btnBuatLaporan != null) {
+            btnBuatLaporan.addActionListener(e -> {
+                new LaporForm(currentUser).setVisible(true);
+            });
+        }
 
-        panelAtas.add(btnBuatLaporan);
-        panelAtas.add(btnRefresh);
-        panelAtas.add(btnLogout);
+        if (btnRefresh != null) {
+            btnRefresh.addActionListener(e -> {
+                loadLaporan();
+                JOptionPane.showMessageDialog(this, "Data berhasil direfresh!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            });
+        }
 
-        // ===== TABEL =====
-        String[] kolom = {"ID", "Judul", "Kategori", "Lokasi", "Status"};
-        DefaultTableModel model = new DefaultTableModel(kolom, 0);
-        tblLaporan = new JTable(model);
+        if (btnLogout != null) {
+            btnLogout.addActionListener(e -> {
+                int confirm = JOptionPane.showConfirmDialog(this, "Yakin ingin logout?", "Logout", JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    dispose();
+                    new LoginPage(null);
+                }
+            });
+        }
 
-        JScrollPane scrollPane = new JScrollPane(tblLaporan);
+        // Double click untuk lihat detail
+        if (tblLaporan != null) {
+            tblLaporan.addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    if (evt.getClickCount() == 2) {
+                        viewDetailLaporan();
+                    }
+                }
+            });
+        }
+    }
 
-        // ===== TAMBAH KE PANEL UTAMA =====
-        DashboardUser.add(panelAtas, BorderLayout.NORTH);
-        DashboardUser.add(scrollPane, BorderLayout.CENTER);
+    private void loadLaporan() {
+        tableModel.setRowCount(0);
+        List<Laporan> laporanList = laporanController.getLaporanByUserId(currentUser.getUserId());
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm");
 
-        add(DashboardUser);
+        for (Laporan laporan : laporanList) {
+            Object[] row = {
+                    laporan.getLaporanId(),
+                    laporan.getJudul(),
+                    laporan.getNamaKategori(),
+                    laporan.getLokasi(),
+                    laporan.getStatus(),
+                    sdf.format(laporan.getTanggalLapor())
+            };
+            tableModel.addRow(row);
+        }
+    }
 
-        // ===== FUNGSI TOMBOL =====
-        btnBuatLaporan.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Fungsi Buat Model.Laporan dipanggil");
-        });
+    private void viewDetailLaporan() {
+        int selectedRow = tblLaporan.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Pilih laporan yang ingin dilihat!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
 
-        btnRefresh.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Data direfresh");
-        });
+        int laporanId = (int) tableModel.getValueAt(selectedRow, 0);
+        Laporan laporan = laporanController.getLaporanById(laporanId);
 
-        btnLogout.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Logout berhasil");
-            dispose();
-            new LoginPage(null); // kembali ke login
-        });
+        if (laporan != null) {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm");
+            String detail = "=== DETAIL LAPORAN ===\n\n" +
+                    "ID: " + laporan.getLaporanId() + "\n" +
+                    "Judul: " + laporan.getJudul() + "\n" +
+                    "Kategori: " + laporan.getNamaKategori() + "\n" +
+                    "Lokasi: " + laporan.getLokasi() + "\n" +
+                    "Status: " + laporan.getStatus() + "\n" +
+                    "Tanggal Lapor: " + sdf.format(laporan.getTanggalLapor()) + "\n\n" +
+                    "Deskripsi:\n" + laporan.getDeskripsi();
+
+            JTextArea textArea = new JTextArea(detail);
+            textArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(textArea);
+            scrollPane.setPreferredSize(new Dimension(500, 300));
+
+            JOptionPane.showMessageDialog(this, scrollPane, "Detail Laporan", JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 }

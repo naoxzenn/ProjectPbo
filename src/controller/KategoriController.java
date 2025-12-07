@@ -1,7 +1,7 @@
 package controller;
 
-import com.model.Kategori;
-import com.util.DatabaseConnection;
+import Model.Kategori;
+import util.DatabaseConnection;
 
 import java.sql.*;
 import java.util.ArrayList;

@@ -1,9 +1,10 @@
 package view;
 
+import Model.User;
+import controller.UserController;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
-import java.sql.*;
 
 public class registerPage extends JDialog {
 
@@ -11,14 +12,18 @@ public class registerPage extends JDialog {
     private JTextField tfUsername;
     private JTextField tfName;
     private JTextField tfEmail;
-    private JTextField tfNomor;
+    private JTextField tfNomor; // AKAN DIHAPUS DARI FORM, tapi biarkan dulu di kode
     private JPasswordField pfPassword;
     private JPasswordField pfRepeatPassword;
     private JButton btnConfirm;
-    private JButton btnCancle;   // ✅ TOMBOL CANCEL
+    private JButton btnCancle;
+
+    private UserController userController;
 
     public registerPage(JFrame parent) {
         super(parent);
+        userController = new UserController();
+
         setTitle("Register");
         setContentPane(registerPane);
         setMinimumSize(new Dimension(450, 500));
@@ -29,89 +34,76 @@ public class registerPage extends JDialog {
         // ✅ TOMBOL REGISTER
         btnConfirm.addActionListener(e -> {
 
-            String username = tfUsername.getText();
-            String nama = tfName.getText();
-            String email = tfEmail.getText();
-            String nomor = tfNomor.getText();
+            String username = tfUsername.getText().trim();
+            String nama = tfName.getText().trim();
+            String email = tfEmail.getText().trim();
+            // String nomor = tfNomor.getText().trim(); // TIDAK DIPAKAI LAGI
             String password = String.valueOf(pfPassword.getPassword());
             String repeat = String.valueOf(pfRepeatPassword.getPassword());
 
+            // ✅ VALIDASI INPUT KOSONG
             if (username.isEmpty() || nama.isEmpty() || email.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Semua field wajib diisi!");
+                JOptionPane.showMessageDialog(this, "Semua field wajib diisi!", "Validasi Error", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
+            // ✅ VALIDASI USERNAME MIN 5 KARAKTER
+            if (username.length() < 5) {
+                JOptionPane.showMessageDialog(this, "Username minimal 5 karakter!", "Validasi Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // ✅ VALIDASI PASSWORD MATCH
             if (!password.equals(repeat)) {
-                JOptionPane.showMessageDialog(this, "Password tidak sama!");
+                JOptionPane.showMessageDialog(this, "Password tidak sama!", "Validasi Error", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            if (registerUser(username, password, nama, email, nomor)) {
-                dispose();           // tutup register
+            // ✅ VALIDASI PASSWORD MIN 6 KARAKTER
+            if (password.length() < 6) {
+                JOptionPane.showMessageDialog(this, "Password minimal 6 karakter!", "Validasi Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // ✅ VALIDASI EMAIL FORMAT
+            if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                JOptionPane.showMessageDialog(this, "Format email tidak valid!", "Validasi Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // ✅ CEK USERNAME SUDAH ADA
+            if (userController.isUsernameExists(username)) {
+                JOptionPane.showMessageDialog(this, "Username sudah digunakan!", "Validasi Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // ✅ CEK EMAIL SUDAH ADA
+            if (userController.isEmailExists(email)) {
+                JOptionPane.showMessageDialog(this, "Email sudah terdaftar!", "Validasi Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // ✅ BUAT OBJECT USER (TANPA no_telp)
+            User user = new User(username, password, nama, email);
+
+            // ✅ REGISTER MENGGUNAKAN CONTROLLER
+            boolean success = userController.register(user);
+
+            if (success) {
+                JOptionPane.showMessageDialog(this, "Registrasi BERHASIL! Silakan login.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                dispose();
                 new LoginPage(null); // kembali ke login
+            } else {
+                JOptionPane.showMessageDialog(this, "Registrasi gagal! Silakan coba lagi.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
-;
 
-        // ✅ ✅ TOMBOL CANCEL → KEMBALI KE LOGIN
-        btnCancle.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                dispose();              // Tutup halaman register
-                new LoginPage(null);    // Buka kembali LoginPage
-            }
+        // ✅ TOMBOL CANCEL → KEMBALI KE LOGIN
+        btnCancle.addActionListener(e -> {
+            dispose();
+            new LoginPage(null);
         });
 
         setVisible(true);
     }
-
-    // ✅ SIMPAN USER KE DATABASE
-    private boolean registerUser(String username, String password, String nama, String email, String nomor) {
-
-        final String DB_URL = "jdbc:mysql://localhost/pelaporan?serverTimezone=UTC";
-        final String USERNAME = "root";
-        final String PASSWORD = "";
-
-        String sql = "INSERT INTO users (username, password, nama, email, no_telp) VALUES (?, ?, ?, ?, ?)";
-
-        try (Connection conn = DriverManager.getConnection(DB_URL, USERNAME, PASSWORD);
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, username);
-            ps.setString(2, password);
-            ps.setString(3, nama);
-            ps.setString(4, email);
-            ps.setString(5, nomor);
-
-            ps.executeUpdate();
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Registrasi BERHASIL! Silakan login.",
-                    "Sukses",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
-
-            return true;
-
-        } catch (SQLIntegrityConstraintViolationException e) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Username atau Email sudah digunakan!",
-                    "Duplicate Data",
-                    JOptionPane.ERROR_MESSAGE
-            );
-        } catch (Exception e) {
-            e.printStackTrace(); // WAJIB agar kita tahu error asli
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Error: " + e.getMessage(),
-                    "Database Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
-        }
-
-        return false;
-    }
-
 }

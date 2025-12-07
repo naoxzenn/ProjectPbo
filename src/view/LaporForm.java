@@ -1,9 +1,10 @@
+package view;
+
 import Model.User;
-import com.controller.KategoriController;
-import com.controller.LaporanController;
-import com.Model.Kategori;
-import com.Model.Laporan;
-import com.Model
+import Model.Kategori;
+import Model.Laporan;
+import controller.KategoriController;
+import controller.LaporanController;
 
 import javax.swing.*;
 import java.awt.*;
@@ -16,19 +17,19 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 
 public class LaporForm extends JFrame {
+    // Komponen dari .form file Anda
     private User currentUser;
-
     private JTextField tfJudul;
-    private JTextField tfLokasi;
-    private JTextArea tfDeskripsi;
+    private JTextField tfAlamat; // ini sebenarnya lokasi
     private JComboBox<Kategori> cbxKategori;
+    private JTextArea tfDeskripsi;
     private JTextField tfFoto;
     private JButton btnCariGambar;
     private JButton btnKonfirmasi;
+    private JPanel fotoPane;
     private JLabel lblPreview;
 
     private File selectedFile;
-
     private LaporanController laporanController;
     private KategoriController kategoriController;
 
@@ -36,112 +37,44 @@ public class LaporForm extends JFrame {
         this.currentUser = user;
         this.laporanController = new LaporanController();
         this.kategoriController = new KategoriController();
-        initComponents();
+
+        // initComponents(); // dari .form file Anda
+        setupManual(); // setup tambahan
         loadKategori();
     }
 
-    private void initComponents() {
-        setTitle("Form Lapor Kerusakan");
-        setSize(500, 600);
+    // Setup manual untuk komponen yang belum ada di .form
+    private void setupManual() {
+        setTitle("Form Lapor Kerusakan Infrastruktur");
+        setSize(600, 700);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
-        setResizable(false);
 
-        JPanel mainPanel = new JPanel(new GridBagLayout());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        mainPanel.setBackground(Color.WHITE);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        // Setup label preview di fotoPane
+        if (fotoPane != null) {
+            lblPreview = new JLabel("No image selected");
+            lblPreview.setHorizontalAlignment(SwingConstants.CENTER);
+            lblPreview.setVerticalAlignment(SwingConstants.CENTER);
+            lblPreview.setPreferredSize(new Dimension(200, 150));
+            lblPreview.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+            lblPreview.setOpaque(true);
+            lblPreview.setBackground(Color.LIGHT_GRAY);
+            fotoPane.add(lblPreview);
+        }
 
-        // Judul
-        JLabel lblJudul = new JLabel("Judul Laporan:");
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        mainPanel.add(lblJudul, gbc);
+        // Setup event listeners
+        if (btnCariGambar != null) {
+            btnCariGambar.addActionListener(e -> browseFoto());
+        }
 
-        tfJudul = new JTextField(25);
-        gbc.gridx = 1;
-        mainPanel.add(tfJudul, gbc);
-
-        // Kategori
-        JLabel lblKategori = new JLabel("Kategori:");
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        mainPanel.add(lblKategori, gbc);
-
-        cbxKategori = new JComboBox<>();
-        gbc.gridx = 1;
-        mainPanel.add(cbxKategori, gbc);
-
-        // Lokasi
-        JLabel lblLokasi = new JLabel("Lokasi:");
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        mainPanel.add(lblLokasi, gbc);
-
-        tfLokasi = new JTextField(25);
-        gbc.gridx = 1;
-        mainPanel.add(tfLokasi, gbc);
-
-        // Deskripsi
-        JLabel lblDeskripsi = new JLabel("Deskripsi:");
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        mainPanel.add(lblDeskripsi, gbc);
-
-        tfDeskripsi = new JTextArea(5, 25);
-        tfDeskripsi.setLineWrap(true);
-        tfDeskripsi.setWrapStyleWord(true);
-        JScrollPane scroll = new JScrollPane(tfDeskripsi);
-        gbc.gridx = 1;
-        mainPanel.add(scroll, gbc);
-
-        // Foto
-        JLabel lblFoto = new JLabel("Foto:");
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        mainPanel.add(lblFoto, gbc);
-
-        JPanel fotoPanel = new JPanel(new BorderLayout(5, 5));
-        fotoPanel.setBackground(Color.WHITE);
-
-        tfFoto = new JTextField();
-        tfFoto.setEditable(false);
-        fotoPanel.add(tfFoto, BorderLayout.CENTER);
-
-        btnCariGambar = new JButton("Browse");
-        btnCariGambar.addActionListener(e -> browseFoto());
-        fotoPanel.add(btnCariGambar, BorderLayout.EAST);
-
-        gbc.gridx = 1;
-        mainPanel.add(fotoPanel, gbc);
-
-        // Preview
-        lblPreview = new JLabel("No image selected");
-        lblPreview.setHorizontalAlignment(SwingConstants.CENTER);
-        lblPreview.setVerticalAlignment(SwingConstants.CENTER);
-        lblPreview.setPreferredSize(new Dimension(200, 150));
-        lblPreview.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        lblPreview.setOpaque(true);
-        lblPreview.setBackground(Color.LIGHT_GRAY);
-
-        gbc.gridx = 1;
-        gbc.gridy = 5;
-        mainPanel.add(lblPreview, gbc);
-
-        // Button Konfirmasi
-        btnKonfirmasi = new JButton("Submit");
-        btnKonfirmasi.addActionListener(e -> handleSubmit());
-        gbc.gridx = 1;
-        gbc.gridy = 6;
-        mainPanel.add(btnKonfirmasi, gbc);
-
-        add(mainPanel);
+        if (btnKonfirmasi != null) {
+            btnKonfirmasi.addActionListener(e -> handleSubmit());
+        }
     }
 
     private void loadKategori() {
         List<Kategori> kategoriList = kategoriController.getAllKategori();
+        cbxKategori.removeAllItems(); // Hapus item lama
         for (Kategori k : kategoriList) {
             cbxKategori.addItem(k);
         }
@@ -149,11 +82,24 @@ public class LaporForm extends JFrame {
 
     private void browseFoto() {
         JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
+            public boolean accept(File f) {
+                if (f.isDirectory()) return true;
+                String name = f.getName().toLowerCase();
+                return name.endsWith(".jpg") || name.endsWith(".jpeg") ||
+                        name.endsWith(".png") || name.endsWith(".gif");
+            }
+            public String getDescription() {
+                return "Image Files (*.jpg, *.jpeg, *.png, *.gif)";
+            }
+        });
+
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             selectedFile = fileChooser.getSelectedFile();
             tfFoto.setText(selectedFile.getName());
 
+            // Tampilkan preview
             try {
                 ImageIcon icon = new ImageIcon(selectedFile.getAbsolutePath());
                 Image img = icon.getImage().getScaledInstance(200, 150, Image.SCALE_SMOOTH);
@@ -161,7 +107,7 @@ public class LaporForm extends JFrame {
                 lblPreview.setText("");
             } catch (Exception e) {
                 e.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Gagal memuat preview foto!");
+                JOptionPane.showMessageDialog(this, "Gagal memuat preview foto!", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -169,7 +115,7 @@ public class LaporForm extends JFrame {
     private void handleSubmit() {
         // Ambil nilai input
         String judul = tfJudul.getText().trim();
-        String lokasi = tfLokasi.getText().trim();
+        String lokasi = tfAlamat.getText().trim(); // tfAlamat = lokasi
         String deskripsi = tfDeskripsi.getText().trim();
         Kategori kategori = (Kategori) cbxKategori.getSelectedItem();
 
@@ -178,32 +124,37 @@ public class LaporForm extends JFrame {
             JOptionPane.showMessageDialog(this, "Semua field harus diisi!", "Validasi Error", JOptionPane.WARNING_MESSAGE);
             return;
         }
+
         if (selectedFile == null) {
-            JOptionPane.showMessageDialog(this, "Silakan pilih foto!", "Validasi Error", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        if (selectedFile.length() > 5 * 1024 * 1024) {
-            JOptionPane.showMessageDialog(this, "Ukuran file maksimal 5MB!", "Validasi Error", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Silakan pilih foto kerusakan!", "Validasi Error", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Simpan foto
+        if (selectedFile.length() > 5 * 1024 * 1024) {
+            JOptionPane.showMessageDialog(this, "Ukuran file terlalu besar! Maksimal 5MB.", "Validasi Error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Simpan foto ke folder uploads
         String fotoPath = null;
         try {
             File uploadsDir = new File("uploads");
-            if (!uploadsDir.exists()) uploadsDir.mkdir();
+            if (!uploadsDir.exists()) {
+                uploadsDir.mkdir();
+            }
 
             String fileName = System.currentTimeMillis() + "_" + selectedFile.getName();
             Path destination = Paths.get("uploads", fileName);
             Files.copy(selectedFile.toPath(), destination, StandardCopyOption.REPLACE_EXISTING);
             fotoPath = "uploads/" + fileName;
+
         } catch (IOException e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Gagal menyimpan foto!", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Buat Laporan
+        // Buat object Laporan
         Laporan laporan = new Laporan(
                 currentUser.getUserId(),
                 kategori.getKategoriId(),
@@ -213,12 +164,15 @@ public class LaporForm extends JFrame {
                 fotoPath
         );
 
+        // Simpan ke database
         boolean success = laporanController.createLaporan(laporan);
+
         if (success) {
-            JOptionPane.showMessageDialog(this, "Laporan berhasil dikirim!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Laporan berhasil dikirim!\nStatus: Pending", "Sukses", JOptionPane.INFORMATION_MESSAGE);
             dispose();
+            // Refresh dashboard jika ada
         } else {
-            JOptionPane.showMessageDialog(this, "Gagal mengirim laporan!", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Gagal mengirim laporan! Silakan coba lagi.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 }

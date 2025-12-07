@@ -2,9 +2,12 @@ package view;
 
 import Model.Laporan;
 import Model.User;
+import controller.LaporanController;
 
 import javax.swing.*;
-import java.util.ArrayList;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 public class dashboardAdmin extends JFrame {
@@ -16,129 +19,202 @@ public class dashboardAdmin extends JFrame {
     private JPanel Adminpane;
 
     private User currentUser;
-    private List<Laporan> laporanList; // Data laporan langsung di sini
+    private LaporanController laporanController;
+    private DefaultTableModel tableModel;
 
     public dashboardAdmin(User user) {
         this.currentUser = user;
+        this.laporanController = new LaporanController();
 
-        // ===== DATA LAPORAN DUMMY =====
-        laporanList = new ArrayList<>();
-        laporanList.add(new Laporan(1, "User1", "Jalan Rusak", "Pending"));
-        laporanList.add(new Laporan(2, "User2", "Lampu Mati", "Diproses"));
+        // initComponents(); // dari .form file
+        setupManual();
+        loadLaporan();
+        setVisible(true);
 
-        // ===== FRAME BASIC =====
-        setTitle("Dashboard Admin");
-        setSize(400, 300);
+        System.out.println("Admin Login: " + currentUser.getNama());
+    }
+
+    private void setupManual() {
+        setTitle("Dashboard Admin - " + currentUser.getNama());
+        setSize(900, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        Adminpane = new JPanel();
-        add(Adminpane);
-
-        btnStatus = new JButton("Ubah Status");
-        btnSelesai = new JButton("Selesai");
-        btnLogout = new JButton("Logout");
-
-        Adminpane.add(btnStatus);
-        Adminpane.add(btnSelesai);
-        Adminpane.add(btnLogout);
-
-        // ===== ACTION BUTTON =====
-        btnStatus.addActionListener(e -> {
-            String idInput = JOptionPane.showInputDialog(this, "Masukkan ID Model.Laporan:");
-            if (idInput != null) {
-                int laporanId = Integer.parseInt(idInput);
-                tombolUbahStatus(laporanId);
+        // Setup table model
+        String[] kolom = {"ID", "User", "Judul", "Kategori", "Lokasi", "Status", "Tanggal"};
+        tableModel = new DefaultTableModel(kolom, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
             }
-        });
+        };
 
-        btnSelesai.addActionListener(e -> {
-            String idInput = JOptionPane.showInputDialog(this, "Masukkan ID Model.Laporan:");
-            if (idInput != null) {
-                int laporanId = Integer.parseInt(idInput);
-                tombolSelesai(laporanId);
-            }
-        });
+        if (tblLaporan != null) {
+            tblLaporan.setModel(tableModel);
+            tblLaporan.setRowHeight(25);
+            tblLaporan.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+        }
 
-        btnLogout.addActionListener(e -> tombolLogout());
+        // ===== EVENT BUTTON =====
+        if (btnStatus != null) {
+            btnStatus.addActionListener(e -> updateStatus());
+        }
 
-        setVisible(true);
+        if (btnSelesai != null) {
+            btnSelesai.addActionListener(e -> markAsSelesai());
+        }
 
-        System.out.println("Admin Login: " + currentUser.nama);
-        loadStatistik();
-        loadLaporan();
+        if (btnLogout != null) {
+            btnLogout.addActionListener(e -> handleLogout());
+        }
+
+        // Double click untuk lihat detail
+        if (tblLaporan != null) {
+            tblLaporan.addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    if (evt.getClickCount() == 2) {
+                        viewDetailLaporan();
+                    }
+                }
+            });
+        }
     }
 
-    // =========================
-    // LOGIKA LAPORAN
-    // =========================
-    public void loadStatistik() {
-        int total = laporanList.size();
-        int pending = (int) laporanList.stream().filter(l -> l.getStatus().equalsIgnoreCase("Pending")).count();
-        int diproses = (int) laporanList.stream().filter(l -> l.getStatus().equalsIgnoreCase("Diproses")).count();
-        int selesai = (int) laporanList.stream().filter(l -> l.getStatus().equalsIgnoreCase("Selesai")).count();
+    private void loadLaporan() {
+        tableModel.setRowCount(0);
+        List<Laporan> laporanList = laporanController.getAllLaporan();
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm");
 
+        for (Laporan laporan : laporanList) {
+            Object[] row = {
+                    laporan.getLaporanId(),
+                    laporan.getNamaUser(),
+                    laporan.getJudul(),
+                    laporan.getNamaKategori(),
+                    laporan.getLokasi(),
+                    laporan.getStatus(),
+                    sdf.format(laporan.getTanggalLapor())
+            };
+            tableModel.addRow(row);
+        }
+
+        // Update statistik
+        loadStatistik();
+    }
+
+    private void loadStatistik() {
+        int total = laporanController.getAllLaporan().size();
+        int pending = laporanController.countLaporanByStatus("Pending");
+        int diproses = laporanController.countLaporanByStatus("Diproses");
+        int selesai = laporanController.countLaporanByStatus("Selesai");
+
+        System.out.println("=== STATISTIK LAPORAN ===");
         System.out.println("Total   : " + total);
         System.out.println("Pending : " + pending);
         System.out.println("Diproses: " + diproses);
         System.out.println("Selesai : " + selesai);
     }
 
-    public void loadLaporan() {
-        System.out.println("Daftar laporan:");
-        for (Laporan l : laporanList) {
-            System.out.println(l.getId() + " | " + l.getJudul() + " | " + l.getStatus());
-        }
-    }
-
-    public void tombolUbahStatus(int laporanId) {
-        Laporan laporan = findLaporanById(laporanId);
-        if (laporan == null) {
-            JOptionPane.showMessageDialog(this, "Model.Laporan tidak ditemukan!");
+    private void updateStatus() {
+        int selectedRow = tblLaporan.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Pilih laporan yang ingin diupdate!", "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
+
+        int laporanId = (int) tableModel.getValueAt(selectedRow, 0);
+        String currentStatus = (String) tableModel.getValueAt(selectedRow, 5);
 
         String[] statusOptions = {"Pending", "Diproses", "Selesai", "Ditolak"};
         String newStatus = (String) JOptionPane.showInputDialog(
                 this,
-                "Pilih Status Baru:",
-                "Update Status",
+                "Pilih status baru:",
+                "Update Status Laporan",
                 JOptionPane.QUESTION_MESSAGE,
                 null,
                 statusOptions,
-                laporan.getStatus()
+                currentStatus
         );
 
-        if (newStatus != null) {
-            laporan.setStatus(newStatus);
-            JOptionPane.showMessageDialog(this, "Status berhasil diubah!");
-            refreshData();
+        if (newStatus != null && !newStatus.equals(currentStatus)) {
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    "Apakah Anda yakin ingin mengubah status dari '" + currentStatus + "' ke '" + newStatus + "'?",
+                    "Konfirmasi Update",
+                    JOptionPane.YES_NO_OPTION);
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                boolean success = laporanController.updateStatus(laporanId, newStatus);
+
+                if (success) {
+                    JOptionPane.showMessageDialog(this, "Status berhasil diupdate!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                    loadLaporan();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Gagal mengupdate status!", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
         }
     }
 
-    public void tombolSelesai(int laporanId) {
-        Laporan laporan = findLaporanById(laporanId);
+    private void markAsSelesai() {
+        int selectedRow = tblLaporan.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Pilih laporan yang ingin ditandai selesai!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        int laporanId = (int) tableModel.getValueAt(selectedRow, 0);
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Tandai laporan ini sebagai SELESAI?",
+                "Konfirmasi",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            boolean success = laporanController.updateStatus(laporanId, "Selesai");
+
+            if (success) {
+                JOptionPane.showMessageDialog(this, "Laporan ditandai selesai!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                loadLaporan();
+            } else {
+                JOptionPane.showMessageDialog(this, "Gagal mengupdate status!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void viewDetailLaporan() {
+        int selectedRow = tblLaporan.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Pilih laporan yang ingin dilihat!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        int laporanId = (int) tableModel.getValueAt(selectedRow, 0);
+        Laporan laporan = laporanController.getLaporanById(laporanId);
+
         if (laporan != null) {
-            laporan.setStatus("Selesai");
-            JOptionPane.showMessageDialog(this, "Model.Laporan diselesaikan!");
-            refreshData();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm");
+
+            String detail = "=== DETAIL LAPORAN ===\n\n" +
+                    "ID Laporan: " + laporan.getLaporanId() + "\n" +
+                    "Dilaporkan oleh: " + laporan.getNamaUser() + "\n" +
+                    "Judul: " + laporan.getJudul() + "\n" +
+                    "Kategori: " + laporan.getNamaKategori() + "\n" +
+                    "Lokasi: " + laporan.getLokasi() + "\n" +
+                    "Status: " + laporan.getStatus() + "\n" +
+                    "Tanggal Lapor: " + sdf.format(laporan.getTanggalLapor()) + "\n" +
+                    "Terakhir Update: " + sdf.format(laporan.getTanggalUpdate()) + "\n\n" +
+                    "Deskripsi:\n" + laporan.getDeskripsi();
+
+            JTextArea textArea = new JTextArea(detail);
+            textArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(textArea);
+            scrollPane.setPreferredSize(new Dimension(500, 300));
+
+            JOptionPane.showMessageDialog(this, scrollPane, "Detail Laporan", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
-    private Laporan findLaporanById(int id) {
-        for (Laporan l : laporanList) {
-            if (l.getId() == id) return l;
-        }
-        return null;
-    }
-
-    public void refreshData() {
-        loadStatistik();
-        loadLaporan();
-        System.out.println("Data direfresh!");
-    }
-
-    public void tombolLogout() {
+    private void handleLogout() {
         int confirm = JOptionPane.showConfirmDialog(
                 this,
                 "Yakin ingin logout?",
@@ -152,4 +228,3 @@ public class dashboardAdmin extends JFrame {
         }
     }
 }
-
