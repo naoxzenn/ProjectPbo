@@ -7,6 +7,7 @@ import controller.LaporanController;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
@@ -26,7 +27,7 @@ public class dashboardAdmin extends JFrame {
         this.currentUser = user;
         this.laporanController = new LaporanController();
 
-        System.out.println("🚀 Dashboard Admin dibuka untuk: " + currentUser.getNama());
+        System.out.println("Dashboard Admin dibuka untuk: " + currentUser.getNama());
 
         initComponents();
         setupTable();
@@ -42,12 +43,55 @@ public class dashboardAdmin extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Buat panel utama jika belum ada dari .form
-        if (Adminpane == null) {
-            Adminpane = new JPanel(new BorderLayout(10, 10));
-            Adminpane.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-            Adminpane.setBackground(Color.WHITE);
-        }
+        // Buat panel utama
+        Adminpane = new JPanel(new BorderLayout(10, 10));
+        Adminpane.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        Adminpane.setBackground(Color.WHITE);
+
+        // Panel Header
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(Color.WHITE);
+
+        JLabel lblTitle = new JLabel("Dashboard Admin - " + currentUser.getNama());
+        lblTitle.setFont(new Font("Arial", Font.BOLD, 20));
+        headerPanel.add(lblTitle, BorderLayout.WEST);
+
+        btnLogout = new JButton("Logout");
+        btnLogout.setBackground(new Color(238, 75, 43));
+        btnLogout.setForeground(Color.WHITE);
+        btnLogout.setFocusPainted(false);
+        headerPanel.add(btnLogout, BorderLayout.EAST);
+
+        // Panel Button
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        buttonPanel.setBackground(Color.WHITE);
+
+        btnStatus = new JButton("Ubah Status");
+        btnStatus.setFont(new Font("Arial", Font.BOLD, 14));
+        btnStatus.setBackground(new Color( 55, 0, 255));
+        btnStatus.setForeground(Color.WHITE);
+        btnStatus.setFocusPainted(false);
+        btnStatus.setPreferredSize(new Dimension(150, 35));
+
+        btnSelesai = new JButton("Tandai Selesai");
+        btnSelesai.setFont(new Font("Arial", Font.BOLD, 14));
+        btnSelesai.setBackground(new Color(0, 255, 4));
+        btnSelesai.setForeground(Color.WHITE);
+        btnSelesai.setFocusPainted(false);
+        btnSelesai.setPreferredSize(new Dimension(170, 35));
+
+        buttonPanel.add(btnStatus);
+        buttonPanel.add(btnSelesai);
+
+        // Panel Tabel
+        tblLaporan = new JTable();
+        JScrollPane scrollPane = new JScrollPane(tblLaporan);
+        scrollPane.setBorder(BorderFactory.createTitledBorder("Daftar Semua Laporan"));
+
+        // Assembly
+        Adminpane.add(headerPanel, BorderLayout.NORTH);
+        Adminpane.add(buttonPanel, BorderLayout.SOUTH);
+        Adminpane.add(scrollPane, BorderLayout.CENTER);
 
         setContentPane(Adminpane);
     }
@@ -61,11 +105,6 @@ public class dashboardAdmin extends JFrame {
                 return false;
             }
         };
-
-        // Setup tabel jika belum ada dari .form
-        if (tblLaporan == null) {
-            tblLaporan = new JTable();
-        }
 
         tblLaporan.setModel(tableModel);
         tblLaporan.setRowHeight(25);
@@ -86,17 +125,6 @@ public class dashboardAdmin extends JFrame {
     }
 
     private void setupEventListeners() {
-        // Setup buttons jika belum ada dari .form
-        if (btnStatus == null) {
-            btnStatus = new JButton("Ubah Status");
-        }
-        if (btnSelesai == null) {
-            btnSelesai = new JButton("Tandai Selesai");
-        }
-        if (btnLogout == null) {
-            btnLogout = new JButton("Logout");
-        }
-
         // Event handlers
         btnStatus.addActionListener(e -> updateStatus());
         btnSelesai.addActionListener(e -> markAsSelesai());
@@ -257,6 +285,11 @@ public class dashboardAdmin extends JFrame {
         if (laporan != null) {
             SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm");
 
+            // Panel utama dengan BorderLayout
+            JPanel detailPanel = new JPanel(new BorderLayout(10, 10));
+            detailPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+            // Text area untuk detail
             String detail = "=== DETAIL LAPORAN ===\n\n" +
                     "ID Laporan: " + laporan.getLaporanId() + "\n" +
                     "Dilaporkan oleh: " + laporan.getNamaUser() + "\n" +
@@ -271,13 +304,91 @@ public class dashboardAdmin extends JFrame {
             JTextArea textArea = new JTextArea(detail);
             textArea.setEditable(false);
             textArea.setFont(new Font("Arial", Font.PLAIN, 13));
+            textArea.setBackground(new Color(245, 245, 245));
             JScrollPane scrollPane = new JScrollPane(textArea);
-            scrollPane.setPreferredSize(new Dimension(550, 350));
+            scrollPane.setPreferredSize(new Dimension(500, 250));
 
-            JOptionPane.showMessageDialog(this,
-                    scrollPane,
-                    "Detail Laporan",
-                    JOptionPane.INFORMATION_MESSAGE);
+            detailPanel.add(scrollPane, BorderLayout.CENTER);
+
+            // Tambahkan preview foto jika ada
+            if (laporan.getFotoPath() != null && !laporan.getFotoPath().isEmpty()) {
+                System.out.println("🖼️ Mencoba load foto dari: " + laporan.getFotoPath());
+
+                try {
+                    File fotoFile = new File(laporan.getFotoPath());
+
+                    if (fotoFile.exists()) {
+                        System.out.println("✅ File foto ditemukan: " + fotoFile.getAbsolutePath());
+
+                        ImageIcon icon = new ImageIcon(laporan.getFotoPath());
+                        Image img = icon.getImage();
+
+                        // Hitung proporsi untuk resize
+                        int maxWidth = 500;
+                        int maxHeight = 350;
+                        int imgWidth = icon.getIconWidth();
+                        int imgHeight = icon.getIconHeight();
+
+                        if (imgWidth > 0 && imgHeight > 0) {
+                            double scale = Math.min(
+                                    (double) maxWidth / imgWidth,
+                                    (double) maxHeight / imgHeight
+                            );
+
+                            int scaledWidth = (int) (imgWidth * scale);
+                            int scaledHeight = (int) (imgHeight * scale);
+
+                            Image scaledImg = img.getScaledInstance(scaledWidth, scaledHeight, Image.SCALE_SMOOTH);
+
+                            JLabel lblFoto = new JLabel(new ImageIcon(scaledImg));
+                            lblFoto.setBorder(BorderFactory.createTitledBorder("Foto Kerusakan"));
+                            lblFoto.setHorizontalAlignment(SwingConstants.CENTER);
+
+                            JPanel fotoPanel = new JPanel(new BorderLayout());
+                            fotoPanel.add(lblFoto, BorderLayout.CENTER);
+                            fotoPanel.setPreferredSize(new Dimension(500, 370));
+
+                            detailPanel.add(fotoPanel, BorderLayout.SOUTH);
+
+                            System.out.println("✅ Foto berhasil ditampilkan");
+                        } else {
+                            System.err.println("❌ Ukuran gambar tidak valid");
+                        }
+                    } else {
+                        System.err.println("❌ File foto tidak ditemukan: " + fotoFile.getAbsolutePath());
+
+                        JLabel lblNoFoto = new JLabel("⚠️ Foto tidak ditemukan di: " + laporan.getFotoPath());
+                        lblNoFoto.setHorizontalAlignment(SwingConstants.CENTER);
+                        lblNoFoto.setForeground(Color.RED);
+                        lblNoFoto.setBorder(BorderFactory.createTitledBorder("Foto Kerusakan"));
+                        detailPanel.add(lblNoFoto, BorderLayout.SOUTH);
+                    }
+                } catch (Exception ex) {
+                    System.err.println("❌ Error loading foto: " + ex.getMessage());
+                    ex.printStackTrace();
+
+                    JLabel lblError = new JLabel("❌ Error memuat foto: " + ex.getMessage());
+                    lblError.setHorizontalAlignment(SwingConstants.CENTER);
+                    lblError.setForeground(Color.RED);
+                    lblError.setBorder(BorderFactory.createTitledBorder("Foto Kerusakan"));
+                    detailPanel.add(lblError, BorderLayout.SOUTH);
+                }
+            } else {
+                System.out.println("⚠️ Laporan tidak memiliki foto");
+
+                JLabel lblNoFoto = new JLabel("📷 Tidak ada foto untuk laporan ini");
+                lblNoFoto.setHorizontalAlignment(SwingConstants.CENTER);
+                lblNoFoto.setForeground(Color.GRAY);
+                lblNoFoto.setBorder(BorderFactory.createTitledBorder("Foto Kerusakan"));
+                detailPanel.add(lblNoFoto, BorderLayout.SOUTH);
+            }
+
+            // Tampilkan dialog dengan ukuran yang sesuai
+            JDialog dialog = new JDialog(this, "Detail Laporan", true);
+            dialog.setContentPane(new JScrollPane(detailPanel));
+            dialog.setSize(550, 680);
+            dialog.setLocationRelativeTo(this);
+            dialog.setVisible(true);
         }
     }
 
