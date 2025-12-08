@@ -26,20 +26,33 @@ public class dashboardAdmin extends JFrame {
         this.currentUser = user;
         this.laporanController = new LaporanController();
 
-        // initComponents(); // dari .form file
-        setupManual();
-        loadLaporan();
-        setVisible(true);
+        System.out.println("🚀 Dashboard Admin dibuka untuk: " + currentUser.getNama());
 
-        System.out.println("Admin Login: " + currentUser.getNama());
+        initComponents();
+        setupTable();
+        setupEventListeners();
+        loadLaporan();
+
+        setVisible(true);
     }
 
-    private void setupManual() {
+    private void initComponents() {
         setTitle("Dashboard Admin - " + currentUser.getNama());
-        setSize(900, 600);
+        setSize(1000, 650);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
+        // Buat panel utama jika belum ada dari .form
+        if (Adminpane == null) {
+            Adminpane = new JPanel(new BorderLayout(10, 10));
+            Adminpane.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            Adminpane.setBackground(Color.WHITE);
+        }
+
+        setContentPane(Adminpane);
+    }
+
+    private void setupTable() {
         // Setup table model
         String[] kolom = {"ID", "User", "Judul", "Kategori", "Lokasi", "Status", "Tanggal"};
         tableModel = new DefaultTableModel(kolom, 0) {
@@ -49,40 +62,68 @@ public class dashboardAdmin extends JFrame {
             }
         };
 
-        if (tblLaporan != null) {
-            tblLaporan.setModel(tableModel);
-            tblLaporan.setRowHeight(25);
-            tblLaporan.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+        // Setup tabel jika belum ada dari .form
+        if (tblLaporan == null) {
+            tblLaporan = new JTable();
         }
 
-        // ===== EVENT BUTTON =====
-        if (btnStatus != null) {
-            btnStatus.addActionListener(e -> updateStatus());
+        tblLaporan.setModel(tableModel);
+        tblLaporan.setRowHeight(25);
+        tblLaporan.setFont(new Font("Arial", Font.PLAIN, 12));
+        tblLaporan.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+        tblLaporan.getTableHeader().setBackground(new Color(220, 20, 60));
+        tblLaporan.getTableHeader().setForeground(Color.WHITE);
+        tblLaporan.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        // Set column widths
+        tblLaporan.getColumnModel().getColumn(0).setPreferredWidth(50);
+        tblLaporan.getColumnModel().getColumn(1).setPreferredWidth(120);
+        tblLaporan.getColumnModel().getColumn(2).setPreferredWidth(200);
+        tblLaporan.getColumnModel().getColumn(3).setPreferredWidth(120);
+        tblLaporan.getColumnModel().getColumn(4).setPreferredWidth(150);
+        tblLaporan.getColumnModel().getColumn(5).setPreferredWidth(100);
+        tblLaporan.getColumnModel().getColumn(6).setPreferredWidth(150);
+    }
+
+    private void setupEventListeners() {
+        // Setup buttons jika belum ada dari .form
+        if (btnStatus == null) {
+            btnStatus = new JButton("Ubah Status");
+        }
+        if (btnSelesai == null) {
+            btnSelesai = new JButton("Tandai Selesai");
+        }
+        if (btnLogout == null) {
+            btnLogout = new JButton("Logout");
         }
 
-        if (btnSelesai != null) {
-            btnSelesai.addActionListener(e -> markAsSelesai());
-        }
-
-        if (btnLogout != null) {
-            btnLogout.addActionListener(e -> handleLogout());
-        }
+        // Event handlers
+        btnStatus.addActionListener(e -> updateStatus());
+        btnSelesai.addActionListener(e -> markAsSelesai());
+        btnLogout.addActionListener(e -> handleLogout());
 
         // Double click untuk lihat detail
-        if (tblLaporan != null) {
-            tblLaporan.addMouseListener(new java.awt.event.MouseAdapter() {
-                public void mouseClicked(java.awt.event.MouseEvent evt) {
-                    if (evt.getClickCount() == 2) {
-                        viewDetailLaporan();
-                    }
+        tblLaporan.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                if (evt.getClickCount() == 2) {
+                    viewDetailLaporan();
                 }
-            });
-        }
+            }
+        });
     }
 
     private void loadLaporan() {
+        System.out.println("📊 Loading semua laporan...");
+
         tableModel.setRowCount(0);
         List<Laporan> laporanList = laporanController.getAllLaporan();
+
+        System.out.println("📋 Jumlah laporan ditemukan: " + laporanList.size());
+
+        if (laporanList.isEmpty()) {
+            System.out.println("⚠️ Belum ada laporan dalam database");
+        }
+
         SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm");
 
         for (Laporan laporan : laporanList) {
@@ -96,6 +137,7 @@ public class dashboardAdmin extends JFrame {
                     sdf.format(laporan.getTanggalLapor())
             };
             tableModel.addRow(row);
+            System.out.println("✅ Laporan ditambahkan: ID=" + laporan.getLaporanId() + ", " + laporan.getJudul());
         }
 
         // Update statistik
@@ -118,7 +160,10 @@ public class dashboardAdmin extends JFrame {
     private void updateStatus() {
         int selectedRow = tblLaporan.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Pilih laporan yang ingin diupdate!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Pilih laporan yang ingin diupdate!",
+                    "Info",
+                    JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -146,10 +191,16 @@ public class dashboardAdmin extends JFrame {
                 boolean success = laporanController.updateStatus(laporanId, newStatus);
 
                 if (success) {
-                    JOptionPane.showMessageDialog(this, "Status berhasil diupdate!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this,
+                            "Status berhasil diupdate!",
+                            "Sukses",
+                            JOptionPane.INFORMATION_MESSAGE);
                     loadLaporan();
                 } else {
-                    JOptionPane.showMessageDialog(this, "Gagal mengupdate status!", "Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this,
+                            "Gagal mengupdate status!",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
                 }
             }
         }
@@ -158,7 +209,10 @@ public class dashboardAdmin extends JFrame {
     private void markAsSelesai() {
         int selectedRow = tblLaporan.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Pilih laporan yang ingin ditandai selesai!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Pilih laporan yang ingin ditandai selesai!",
+                    "Info",
+                    JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -173,10 +227,16 @@ public class dashboardAdmin extends JFrame {
             boolean success = laporanController.updateStatus(laporanId, "Selesai");
 
             if (success) {
-                JOptionPane.showMessageDialog(this, "Laporan ditandai selesai!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Laporan ditandai selesai!",
+                        "Sukses",
+                        JOptionPane.INFORMATION_MESSAGE);
                 loadLaporan();
             } else {
-                JOptionPane.showMessageDialog(this, "Gagal mengupdate status!", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Gagal mengupdate status!",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -184,7 +244,10 @@ public class dashboardAdmin extends JFrame {
     private void viewDetailLaporan() {
         int selectedRow = tblLaporan.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Pilih laporan yang ingin dilihat!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Pilih laporan yang ingin dilihat!",
+                    "Info",
+                    JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -207,10 +270,14 @@ public class dashboardAdmin extends JFrame {
 
             JTextArea textArea = new JTextArea(detail);
             textArea.setEditable(false);
+            textArea.setFont(new Font("Arial", Font.PLAIN, 13));
             JScrollPane scrollPane = new JScrollPane(textArea);
-            scrollPane.setPreferredSize(new Dimension(500, 300));
+            scrollPane.setPreferredSize(new Dimension(550, 350));
 
-            JOptionPane.showMessageDialog(this, scrollPane, "Detail Laporan", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    scrollPane,
+                    "Detail Laporan",
+                    JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
@@ -223,6 +290,7 @@ public class dashboardAdmin extends JFrame {
         );
 
         if (confirm == JOptionPane.YES_OPTION) {
+            System.out.println("👋 Logout admin...");
             dispose();
             new LoginPage(null);
         }

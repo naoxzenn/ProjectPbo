@@ -7,9 +7,9 @@ import java.sql.*;
 
 public class UserController {
 
-    // Method untuk registrasi user baru (TANPA no_telp)
+    // Method untuk registrasi user baru (DENGAN no_telp)
     public boolean register(User user) {
-        String sql = "INSERT INTO users (username, password, nama, email, role) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO users (username, password, nama, email, no_telp, role) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -18,18 +18,21 @@ public class UserController {
             pstmt.setString(2, user.getPassword());
             pstmt.setString(3, user.getNama());
             pstmt.setString(4, user.getEmail());
-            pstmt.setString(5, user.getRole());
+            pstmt.setString(5, user.getNoTelp());
+            pstmt.setString(6, user.getRole());
 
             int rowsAffected = pstmt.executeUpdate();
+            System.out.println("✅ Register berhasil! Rows affected: " + rowsAffected);
             return rowsAffected > 0;
 
         } catch (SQLException e) {
+            System.err.println("❌ Error saat register:");
             e.printStackTrace();
             return false;
         }
     }
 
-    // Method untuk login
+    // Method untuk login (FIXED - return user lengkap)
     public User login(String username, String password) {
         String sql = "SELECT * FROM users WHERE (username = ? OR email = ?) AND password = ?";
 
@@ -40,6 +43,8 @@ public class UserController {
             pstmt.setString(2, username); // bisa email atau username
             pstmt.setString(3, password);
 
+            System.out.println("🔍 Mencoba login dengan: " + username);
+
             ResultSet rs = pstmt.executeQuery();
 
             if (rs.next()) {
@@ -49,12 +54,18 @@ public class UserController {
                 user.setPassword(rs.getString("password"));
                 user.setNama(rs.getString("nama"));
                 user.setEmail(rs.getString("email"));
+                user.setNoTelp(rs.getString("no_telp"));
                 user.setRole(rs.getString("role"));
                 user.setCreatedAt(rs.getTimestamp("created_at"));
+
+                System.out.println("✅ Login berhasil! User ID: " + user.getUserId() + ", Role: " + user.getRole());
                 return user;
+            } else {
+                System.out.println("❌ Login gagal! Username/password salah.");
             }
 
         } catch (SQLException e) {
+            System.err.println("❌ Error saat login:");
             e.printStackTrace();
         }
 
@@ -105,14 +116,15 @@ public class UserController {
 
     // Method untuk update profil user
     public boolean updateProfile(User user) {
-        String sql = "UPDATE users SET nama = ?, email = ? WHERE user_id = ?";
+        String sql = "UPDATE users SET nama = ?, email = ?, no_telp = ? WHERE user_id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, user.getNama());
             pstmt.setString(2, user.getEmail());
-            pstmt.setInt(3, user.getUserId());
+            pstmt.setString(3, user.getNoTelp());
+            pstmt.setInt(4, user.getUserId());
 
             int rowsAffected = pstmt.executeUpdate();
             return rowsAffected > 0;
@@ -139,6 +151,7 @@ public class UserController {
                 user.setUsername(rs.getString("username"));
                 user.setNama(rs.getString("nama"));
                 user.setEmail(rs.getString("email"));
+                user.setNoTelp(rs.getString("no_telp"));
                 user.setRole(rs.getString("role"));
                 user.setCreatedAt(rs.getTimestamp("created_at"));
                 return user;

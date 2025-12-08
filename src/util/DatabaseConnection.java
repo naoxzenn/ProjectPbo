@@ -84,10 +84,4 @@ public class DatabaseConnection {
             e.printStackTrace();
         }
     }
-
-    // Main untuk test koneksi
-    public static void main(String[] args) {
-        System.out.println("=== TEST KONEKSI DATABASE ===\n");
-        testConnection();
-    }
 }
