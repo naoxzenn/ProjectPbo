@@ -52,7 +52,7 @@ public class dashboardAdmin extends JFrame {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(Color.WHITE);
 
-        JLabel lblTitle = new JLabel("Dashboard Admin - " + currentUser.getNama());
+        JLabel lblTitle = new JLabel("Admin" + currentUser.getNama());
         lblTitle.setFont(new Font("Arial", Font.BOLD, 20));
         headerPanel.add(lblTitle, BorderLayout.WEST);
 

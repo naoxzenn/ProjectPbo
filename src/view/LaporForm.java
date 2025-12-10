@@ -138,9 +138,6 @@ public class LaporForm extends JFrame {
         lblPreview = new JLabel("Belum ada gambar dipilih");
         lblPreview.setHorizontalAlignment(SwingConstants.CENTER);
         lblPreview.setVerticalAlignment(SwingConstants.CENTER);
-        lblPreview.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
-        lblPreview.setOpaque(true);
-        lblPreview.setBackground(new Color(240, 240, 240));
 
         fotoPane.add(lblPreview, BorderLayout.CENTER);
         mainPanel.add(fotoPane, gbc);
@@ -150,11 +147,6 @@ public class LaporForm extends JFrame {
         gbc.gridx = 0;
         gbc.gridwidth = 2;
         btnKonfirmasi = new JButton("Kirim Laporan");
-        btnKonfirmasi.setFont(new Font("Arial", Font.BOLD, 14));
-        btnKonfirmasi.setBackground(new Color(70, 130, 180));
-        btnKonfirmasi.setForeground(Color.WHITE);
-        btnKonfirmasi.setFocusPainted(false);
-        btnKonfirmasi.setPreferredSize(new Dimension(200, 40));
 
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(btnKonfirmasi);
@@ -178,7 +170,7 @@ public class LaporForm extends JFrame {
             cbxKategori.removeAllItems();
             List<Kategori> kategoriList = kategoriController.getAllKategori();
 
-            System.out.println("📋 Loading " + kategoriList.size() + " kategori");
+            System.out.println("Loading " + kategoriList.size() + " kategori");
 
             for (Kategori k : kategoriList) {
                 cbxKategori.addItem(k);
@@ -187,7 +179,6 @@ public class LaporForm extends JFrame {
     }
 
     private void setupEventListeners() {
-        // Event untuk button cari gambar
         if (btnCariGambar != null) {
             btnCariGambar.addActionListener(new ActionListener() {
                 @Override
@@ -197,7 +188,6 @@ public class LaporForm extends JFrame {
             });
         }
 
-        // Event untuk button konfirmasi
         if (btnKonfirmasi != null) {
             btnKonfirmasi.addActionListener(new ActionListener() {
                 @Override
@@ -209,7 +199,7 @@ public class LaporForm extends JFrame {
     }
 
     private void browseFoto() {
-        System.out.println("🖼️ Membuka file chooser...");
+        System.out.println("Membuka file chooser...");
 
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Pilih Foto Kerusakan");
@@ -230,14 +220,13 @@ public class LaporForm extends JFrame {
             selectedFile = fileChooser.getSelectedFile();
             tfFoto.setText(selectedFile.getName());
 
-            System.out.println("✅ File dipilih: " + selectedFile.getName());
+            System.out.println("File dipilih: " + selectedFile.getName());
 
-            // Tampilkan preview dengan resize yang lebih baik
+            // Tampilkan preview gambar
             try {
                 ImageIcon icon = new ImageIcon(selectedFile.getAbsolutePath());
                 Image img = icon.getImage();
 
-                // Hitung proporsi untuk resize
                 int previewWidth = 380;
                 int previewHeight = 230;
                 int imgWidth = icon.getIconWidth();
@@ -255,9 +244,9 @@ public class LaporForm extends JFrame {
                 lblPreview.setIcon(new ImageIcon(scaledImg));
                 lblPreview.setText("");
 
-                System.out.println("✅ Preview gambar berhasil ditampilkan");
+                System.out.println("Preview gambar berhasil ditampilkan");
             } catch (Exception e) {
-                System.err.println("❌ Error loading preview: " + e.getMessage());
+                System.err.println("Error loading preview: " + e.getMessage());
                 e.printStackTrace();
                 JOptionPane.showMessageDialog(this,
                         "Gagal memuat preview foto!",
@@ -276,9 +265,9 @@ public class LaporForm extends JFrame {
         String deskripsi = tfDeskripsi.getText().trim();
         Kategori kategori = (Kategori) cbxKategori.getSelectedItem();
 
-        // ✅ VALIDASI 1: Field kosong
+        // VALIDASI 1
         if (judul.isEmpty() || lokasi.isEmpty() || deskripsi.isEmpty() || kategori == null) {
-            System.out.println("⚠️ Validasi gagal: Ada field yang kosong");
+            System.out.println("Validasi gagal: Ada field yang kosong");
             JOptionPane.showMessageDialog(this,
                     "Semua field harus diisi!",
                     "Validasi Error",
@@ -286,9 +275,9 @@ public class LaporForm extends JFrame {
             return;
         }
 
-        // ✅ VALIDASI 2: Foto belum dipilih
+        // VALIDASI 2: Foto belum dipilih
         if (selectedFile == null) {
-            System.out.println("⚠️ Validasi gagal: Foto belum dipilih");
+            System.out.println("Validasi gagal: Foto belum dipilih");
             JOptionPane.showMessageDialog(this,
                     "Silakan pilih foto kerusakan!",
                     "Validasi Error",
@@ -296,9 +285,9 @@ public class LaporForm extends JFrame {
             return;
         }
 
-        // ✅ VALIDASI 3: Ukuran file
+        // VALIDASI 3: Ukuran file
         if (selectedFile.length() > 5 * 1024 * 1024) {
-            System.out.println("⚠️ Validasi gagal: File terlalu besar");
+            System.out.println("Validasi gagal: File terlalu besar");
             JOptionPane.showMessageDialog(this,
                     "Ukuran file terlalu besar! Maksimal 5MB.",
                     "Validasi Error",
@@ -306,18 +295,18 @@ public class LaporForm extends JFrame {
             return;
         }
 
-        System.out.println("✅ Validasi berhasil");
-        System.out.println("📝 Judul: " + judul);
-        System.out.println("📍 Lokasi: " + lokasi);
-        System.out.println("📂 Kategori: " + kategori.getNamaKategori());
+        System.out.println("Validasi berhasil");
+        System.out.println("Judul: " + judul);
+        System.out.println("Lokasi: " + lokasi);
+        System.out.println("Kategori: " + kategori.getNamaKategori());
 
-        // ✅ Simpan foto ke folder uploads
+        // Simpan foto ke folder uploads
         String fotoPath = null;
         try {
             File uploadsDir = new File("uploads");
             if (!uploadsDir.exists()) {
                 uploadsDir.mkdir();
-                System.out.println("📁 Folder uploads dibuat");
+                System.out.println("Folder uploads dibuat");
             }
 
             String fileName = System.currentTimeMillis() + "_" + selectedFile.getName();
@@ -325,10 +314,10 @@ public class LaporForm extends JFrame {
             Files.copy(selectedFile.toPath(), destination, StandardCopyOption.REPLACE_EXISTING);
             fotoPath = "uploads/" + fileName;
 
-            System.out.println("✅ Foto berhasil disimpan: " + fotoPath);
+            System.out.println("Foto berhasil disimpan: " + fotoPath);
 
         } catch (IOException e) {
-            System.err.println("❌ Error menyimpan foto: " + e.getMessage());
+            System.err.println("Error menyimpan foto: " + e.getMessage());
             e.printStackTrace();
             JOptionPane.showMessageDialog(this,
                     "Gagal menyimpan foto!",
@@ -337,7 +326,7 @@ public class LaporForm extends JFrame {
             return;
         }
 
-        // ✅ Buat object Laporan
+        // Buat object Laporan
         Laporan laporan = new Laporan(
                 currentUser.getUserId(),
                 kategori.getKategoriId(),
@@ -347,19 +336,19 @@ public class LaporForm extends JFrame {
                 fotoPath
         );
 
-        // ✅ Simpan ke database
-        System.out.println("💾 Menyimpan ke database...");
+        //Simpan ke database
+        System.out.println("Menyimpan ke database...");
         boolean success = laporanController.createLaporan(laporan);
 
         if (success) {
-            System.out.println("✅ Laporan berhasil disimpan!");
+            System.out.println("Laporan berhasil disimpan!");
             JOptionPane.showMessageDialog(this,
                     "Laporan berhasil dikirim!\nStatus: Pending",
                     "Sukses",
                     JOptionPane.INFORMATION_MESSAGE);
             dispose();
         } else {
-            System.err.println("❌ Gagal menyimpan laporan ke database");
+            System.err.println("Gagal menyimpan laporan ke database");
             JOptionPane.showMessageDialog(this,
                     "Gagal mengirim laporan! Silakan coba lagi.",
                     "Error",
